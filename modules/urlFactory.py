@@ -27,7 +27,12 @@ class urlFactory:
 
         
         url_cctv = f"https://openapi.its.go.kr:9443/cctvInfo?apiKey={urlFactory.API_KEY}&type=ex&cctvType=4&minX=127.17&maxX=127.18&minY=37.4&maxY=37.5&getType=json"
-        response = urllib.request.urlopen(url_cctv)
+        try:
+            response = urllib.request.urlopen(url_cctv)
+        except Exception as e:
+            if DEBUG_MODE: print(f"[ERROR] Failed to fetch CCTV List: {e}")
+            return 1
+        
         json_str = response.read().decode("utf-8")
         json_object = json.loads(json_str)
 
@@ -81,27 +86,25 @@ class urlFactory:
         if DEBUG_MODE: print("CCTV Names:", cctvNameList)
         return cctvNameList
     
-    def _getCCTVUrl(DEBUG_MODE=False, cctvName=""):
+    def _findCCTVinJson(DEBUG_MODE=False, cctvName=None):
         """
-        WIP
+        CCTV 데이터 반환
 
-        CCTV 이름으로 URL 반환
-        
         Args:
             cctvName (str): 검색할 CCTV 이름
-            
+
         Returns:
-            str: 해당 CCTV의 URL, 없으면 None 반환
+            dict: CCTV 데이터
         """
+
+        cctvList = urlFactory._getCCTVList(DEBUG_MODE=DEBUG_MODE)
         
-        if not cctvName:
-            return None
+        for item in cctvList["response"]["data"]:
+            if item["cctvname"].lower() == cctvName.lower() or item["tag"].lower() == cctvName.lower():
+                url = item["cctvurl"]
+                if DEBUG_MODE: print(f"[INFO] CCTV found. url: {url}")
+                return url
 
-        # 대소문자 구분 없이 검색
-        cctvName_lowercase = cctvName.lower()
-
-        return "asdf"
-    
     # public methods
     def showAllCCTVs(DEBUG_MODE=False, mode="name"):
         """
@@ -129,4 +132,29 @@ class urlFactory:
                 print(f" - {name}")
         else:
             print("사용 가능한 CCTV가 없습니다.")
+
+    def getCCTVUrl(DEBUG_MODE=False, cctvName=None):
+        """
+        CCTV 이름으로 URL 반환
+        
+        Args:
+            cctvName (str): 검색할 CCTV 이름
+            
+        Returns:
+            str: 해당 CCTV의 URL, 없으면 None 반환
+        """
+        
+        if not cctvName:
+            print(f"[ERROR] cctvName is required.")
+            return None
+
+        # 대소문자 구분 없이 검색
+        cctvName_lowercase = cctvName.lower()
+        
+        if DEBUG_MODE:
+            print(f"[INFO] cctvName: {cctvName}, lowercase: {cctvName_lowercase}")
+
+        url = urlFactory._findCCTVinJson(DEBUG_MODE=DEBUG_MODE, cctvName=cctvName_lowercase)
+
+        return "wip"
     
